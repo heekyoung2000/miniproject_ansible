@@ -1,0 +1,13 @@
+<VirtualHost *:80>
+    ServerName webservers
+    ServerAdmin wordpressuser@localhost
+    DocumentRoot /mount/nfs/wordpress
+
+    <Directory "/mount/nfs/wordpress">
+        Options Indexes FollowSymLinks
+        AllowOverride all
+        Require all granted
+    </Directory>
+
+    ErrorLog /etc/httpd/logs/wordpress_error.log
+</VirtualHost>

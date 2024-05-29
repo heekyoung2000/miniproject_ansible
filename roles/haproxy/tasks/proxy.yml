@@ -1,0 +1,51 @@
+- name: haproxyserver 
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install haproxy
+      yum:
+        name: haproxy
+        state: latest
+      when: "'proxy' in group_names"
+        
+    - name: Install httpd
+      yum:
+        name: httpd
+        state: latest
+      when: "'webservers' in group_names"
+    
+    - name: Open http
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+        immediate: yes
+      when: "'webservers' in group_names"
+
+    - name: set haproxy frontend port
+      replace:
+        path: /etc/haproxy/haproxy.cfg
+        regexp: '\*5000'
+        replace: '*:80'
+      when: "'proxy' in group_names"
+
+    - name: set backend web1
+      replace:
+        path: /etc/haproxy/haproxy.cfg
+        regexp: server  app1 127.0.0.1:5001 check
+        replace: server  www1 192.168.56.101:80 check
+      when: "'proxy' in group_names"
+
+    - name: set backend web2
+      replace:
+        path: /etc/haproxy/haproxy.cfg
+        regexp: server  app2 127.0.0.1:5002 check
+        replace: server  www2 192.168.56.109:80 check
+      when: "'proxy' in group_names"
+
+    - name: start haproxy service
+      service:
+        name: haproxy
+        enabled: true
+        state: started
+      when: "'proxy' in group_names"

@@ -1,0 +1,55 @@
+- name: install mariadb
+  hosts: dbserver
+  become: yes
+  tasks:
+    - name: install dependencies
+      yum:
+        name: "{{ item }}"
+        update_cache: yes
+        state: latest
+      with_items:
+        - mariadb-server
+        - MySQL-python
+
+    - name: db start
+      service:
+        name: mariadb
+        state: started
+        enabled: true
+
+    - name: create database for wordpress
+      mysql_db:
+        name: "wpdb"
+        login_user: "root"
+        login_password: ""
+
+    - name: create mariadb user
+      mysql_user:
+        name: "wordpressuser"
+        password: "root"
+        login_user: "root"
+        login_password: ""
+        host: "%"
+        priv: "wpdb.*: ALL"
+        state: present
+
+    - name: create mariadb user
+      mysql_user:
+        name: "wordpressuser"
+        password: "root"
+        login_user: "root"
+        login_password: ""
+        host: "localhost"
+        priv: "wpdb.*: ALL"
+        state: present
+
+
+    - name: Open Mariadb port in firewall
+      firewalld:
+        port: 3306/tcp
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: reload firewalld
+      command: firewall-cmd --reload

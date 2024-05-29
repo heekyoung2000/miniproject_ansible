@@ -1,0 +1,35 @@
+- name: wordpress deployment
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Install Apach2 Package
+      yum:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      with_items:
+        - dnf
+        - httpd
+        - php
+        - php-mysql
+        - php-gd
+        - php-mbstring
+        - wget
+        - unzip
+        - php-curl
+        - php-xml
+        - php-xmlrpc          
+
+    - name: Set SElinux permissions for wordPress
+      selinux:
+        policy: targeted
+        state: permissive
+
+    - name: Starting Apache2
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+- name: import nfsserver
+  import_playbook: nfs.yml

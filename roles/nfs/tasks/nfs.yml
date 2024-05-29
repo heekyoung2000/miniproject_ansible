@@ -1,0 +1,113 @@
+- name: nfs server set
+  hosts: nfsserver
+  gather_facts: no
+  become: yes
+
+  tasks:
+    - name: install nfs
+      yum:
+        name: nfs-utils
+        state: latest
+    
+    - name: start nfs
+      service:
+        name: nfs-utils
+        state: started
+
+    - name: make directory
+      file:
+        path: /mount/nfs_shared
+        state: directory
+        mode: 0777
+
+    - name: /etc/exports configuration web1
+      lineinfile:
+        path: /etc/exports
+        line: /mount/nfs_shared 192.168.56.101/24(rw,sync)
+
+    - name: /etc/exports configuration
+      lineinfile:
+        path: /etc/exports
+        line: /mount/nfs_shared 192.168.56.109/24(rw,sync)
+
+    - name: download wordpress
+      get_url:
+        url: https://ko.wordpress.org/wordpress-4.9.18-ko_KR.tar.gz
+        dest: /mount/nfs_shared/wordpress-4.9.18.tar.gz
+
+    - name: Unarchive Wordpress Source
+      unarchive:
+        src: /mount/nfs_shared/wordpress-4.9.18.tar.gz
+        remote_src: true
+        dest: /mount/nfs_shared/
+
+    - name: nfs service restart
+      service:
+        name: nfs
+        state: restarted
+
+- name: nfs client setup
+  hosts: webservers
+  gather_facts: no
+  become: yes
+  tasks:
+    - name : OPen http
+      firewalld:
+        service: http
+        state: enabled
+        permanent: true
+        immediate: true
+
+    - name: install nfs
+      yum:
+        name: nfs-utils
+        state: latest
+
+    - name: start nfs
+      service:
+        name: nfs-utils
+        state: started
+
+    - name: make directory_nfs
+      file:
+        path: /mount/nfs
+        state: directory
+
+    - name: make mountpoint
+      mount:
+        path: /mount/nfs
+        src: 192.168.56.113:/mount/nfs_shared
+        fstype: nfs
+        state: mounted
+
+    - name: virtual host configuration file
+      template:
+        src: vhost.j2
+        dest: /etc/httpd/conf.d/00_vhost.conf
+
+    - name: connect db
+      template:
+        src: wp-config.php.j2
+        dest: /mount/nfs/wordpress/wp-config.php
+        mode: 0777
+      
+    - name: Open port nfs
+      firewalld:
+        service: nfs
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Open port mountd
+      firewalld:
+        service: mountd
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: restart httpd
+      service:
+        name: httpd
+        state: restarted
+        enabled: yes
+
